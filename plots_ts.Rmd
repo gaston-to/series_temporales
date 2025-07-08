@@ -1,0 +1,74 @@
+---
+title: "Herramientas gráficas para series temporales"
+subtitle: "Extracto de Forecasting: Principles and Practice"
+author: "Rob J Hyndman, George Ath"
+
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(kableExtra)
+library(tidyverse)
+library(fpp2)
+library(GGally)
+```
+
+# Gráficos de series temporales
+
+## Lag plots
+
+En esta sección se trabaja con los datos de produccion trimestral de cerveza en Australia desde 1956 hasta 2010. En el siguiente gráfico se muestra la serie temporal de producción de cerveza.
+
+```{r}
+autoplot(ausbeer) +
+  ggtitle("Quarterly beer production: Australia") +
+  ylab("Production (megalitres)") + xlab("Year")
+```
+
+Mediante la función `window()` se puede seleccionar un rango específico de la serie en cuestión. En este caso, siguiendo el ejemplo del libro, se selecciona desde 1992 hasta el final de la serie.
+
+```{r}
+autoplot(ausbeer %>% window(start = 1992)) +
+  scale_x_continuous(breaks = seq(1992, end(ausbeer)[1], by = 1)) +
+  geom_point()
+```
+
+Tanto en el primer gráfico com en el segundo, se observa que la producción de cerveza muestra una estacionalidad anual marcada. En el año se aprecia un aumento en la produccion en los meses de primavera y verano (trimestre 1 y 4) y una disminución en los meses de otoño e invierno (trimestre 2 y 3).
+
+```{r lag_plot}
+# gráfico de lag
+gglagplot(ausbeer %>% window(start = 1992), lags = 9) +
+  ggtitle("Lag plot of quarterly beer production: Australia") +
+  ylab("Beer production (megalitres)") + xlab("Lag (quarters)")
+```
+
+En el gráfico de `lags` se visualiza la relación entre una observación en el tiempo $t$ y la observación anterior en el tiempo $t -k$. En este caso, cada color representa un cuatrimestre del año. Al observar el panel `lag 4`:  
+
+- se observa una fuerte correlación positiva en la producción de cerveza entre el mismo trimestre de años consecutivos. Por ejemplo, la producción del primer trimestre de un año está fuertemente correlacionada con la producción del primer trimestre del año anterior.  
+
+- el panel `lag 2` muestra una correlación negativa, ello se debe a que la elevada producción de cerveza del cuarto trimestre del año anterior de asocia con una baja producción en el segundo trimestre del año actual.  
+
+## Autocorrelación
+
+```{r acf_pacf}
+# coeficientes de autocorrelación para la serie de cerveza
+acf_ausbeer <- acf(ausbeer %>% window(start = 1992), plot = FALSE, lag.max = 9) 
+
+data.frame(
+  lag = paste0("r", 1:9),
+  acf = round(acf_ausbeer$acf[-1], 2)
+) %>%
+  pivot_wider(names_from = lag, values_from = acf) %>%
+  kable()
+```
+
+
+```{r acf_plot}
+
+ggAcf(ausbeer %>% window(start = 1992))
+
+```
+
+
+
