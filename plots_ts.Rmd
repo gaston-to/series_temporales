@@ -51,9 +51,13 @@ En el gráfico de `lags` se visualiza la relación entre una observación en el 
 
 ## Autocorrelación
 
+La siguiente tabla muestra los coeficientes de autocorrelación para los primeros 9 rezagos (lags) de la serie de cerveza. En la misma se se observa:  
+- *r4*: la autocorrelación es positiva y alta (obsevado en el gráfico de `lags`), lo que indica que la producción del primer trimestre de un año está fuertemente correlacionada con la producción del primer trimestre del año anterior.  
+- *r2*: la autocorrelación es negativa, lo que indica que la producción del cuarto trimestre del año anterior está inversamente relacionada con la producción del segundo trimestre del año actual.
+
 ```{r acf_pacf}
 # coeficientes de autocorrelación para la serie de cerveza
-acf_ausbeer <- acf(ausbeer %>% window(start = 1992), plot = FALSE, lag.max = 9) 
+acf_ausbeer <- acf(ausbeer %>% window(start = 1992), plot = FALSE, lag.max = 9)
 
 data.frame(
   lag = paste0("r", 1:9),
@@ -63,12 +67,238 @@ data.frame(
   kable()
 ```
 
+El siguiente gráfico (**correlarograma**) muestra los datos de la tabla anterior, las líneas punteadas indican si las correlaciones son significativas. 
 
-```{r acf_plot}
+```{r acf_plot, fig.height=3, fig.width=9, fig.align='center'}
+ggAcf(ausbeer %>% window(start = 1992)) +
+  ggtitle("ACF of quarterly beer production: Australia") +
+  ylab("Autocorrelation") + xlab("Lag (quarters)")
+```
 
-ggAcf(ausbeer %>% window(start = 1992))
+### Tendendia y estacionalidad 
 
+Cuando se observa una tendencia en la serie temporal, la autocorrelación tiende a ser significativa y positiva para todos los rezagos.  
+  
+Si la serie presenta estacionalidad, la autocorrelacion será mayor en los rezagos que corresponden a la estacionalidad (en múltiplos de la frecuencia estacional).
+
+En el siguiente ejemplo se muestra la combinación de ambos efectos. Para ello se utiliza la demanda de electrica de Australia.
+
+```{r aus_elec, fig.height=5}
+p1 <- autoplot(elec %>% window(start = 1980)) +
+  ggtitle("Demnada mensual de electricidad: Australia") +
+  ylab("Demanda (GWh)") + xlab("Año") +
+  theme(plot.title = element_text(size = 9))
+
+p2 <- ggAcf(elec %>% window(start = 1980)) +
+  ggtitle("ACF de la demanda mensual de electricidad: Australia") +
+  ylab("Autocorrelación") + xlab("Rezago (meses)") +
+  theme(plot.title = element_text(size = 9))
+
+ggpubr::ggarrange(p1, p2, ncol = 1)
+```
+
+## Ejemplos
+
+### Serie Temporal `gold`
+
+La serie de tiempo `gold` contiene los precios diarios del oro en dolares desde el 1º de enero de 1985 hasta el 31 de marzo de 1989.
+
+```{r gold}
+gold %>% glimpse()
+
+autoplot(gold) +
+  ggtitle("Gold prices: 1985-1989") +
+  ylab("Price (USD)") + xlab("Year")
+
+ggAcf(gold) +
+  ggtitle("ACF of gold prices") +
+  ylab("Autocorrelation") + xlab("Lag (days)")
+```
+
+La `ts` presenta una frecuencia de `r frequency(gold)` y en el día `r which.max(gold)` se observa un outlier (valor de `r gold[which.max(gold)]`).
+
+Sin profundizar en el análisis, se puede observar que la serie presenta:  
+- tendencia creciente y luego decreciente  
+- no se observa estacionalidad a simple vista
+- se aprecian fluctuaciones que pueden interpretarse como ciclos, ej: se observan aumentos y caidas de precios que duran vario días.
+
+### Serie Temporal `woolrynq`
+
+La serie de tiempo `woolrynq` contiene la producción trimestral en toneladas de hilo de lana en Australia de `Mar 1965 - Sep 1994`. 
+
+```{r woolrynq}
+woolyrnq %>% glimpse()
+
+autoplot(woolyrnq) +
+  ggtitle("Producción de hilo de lana: Australia") +
+  ylab("Producción (toneladas)") + xlab("Año")
+
+ggAcf(woolyrnq) +
+  ggtitle("ACF de la producción de hilo de lana: Australia") +
+  ylab("Autocorrelación") + xlab("Rezago (trimestres)")
+
+# gglagplot(woolyrnq, lags = 9) +
+#   ggtitle("Lag plot of wool yarn production: Australia") +
+#   ylab("Wool yarn production (tonnes)") + xlab("Lag (quarters)")
+```  
+
+La `ts` presenta una frecuencia de `r frequency(woolyrnq)`.
+
+Graficamente se observa que la serie presenta:
+- Tendencia creciente (hasta 1970), luego decreciente (hasta 1975) y finalmente estable.  
+- Estacionalidad anual, con pico de producción en el segundo trimestre (la estacionalidad parece modificarse a partir de 1975).  
+- No se observan ciclos claros, aunque se pueden apreciar fluctuaciones en la producción.
+
+### Serie Temporal `gas`
+
+A continuación sepresenta la producción de gas en Australia desde `r start(gas)` hasta `r end(gas)`. La serie tiene una frecuencia de `r frequency(gas)` (si es 12 es mensual).
+```{r gas}
+library(ggpubr)
+ggarrange(
+  autoplot(gas %>% window(end = 1970)) +
+    ggtitle("Gas production: Australia") +
+    ylab("Production (PJ)") + xlab("Year") +
+    geom_point(),
+  ggAcf(gas %>% window(end = 1970)) +
+    ggtitle("ACF of gas production: Australia") +
+    ylab("Autocorrelation") + xlab("Lag (months)"),
+  ncol = 1
+)
+```
+
+La producción de gas muestra una clara tendencia creciente con estacionalidad anual (pico en el lag 12).
+
+### Ventas empresa I
+
+En el siguiente codigo se muestra como cargar un archivo csv, transformar el df a una serie temporal y graficar la misma. Los datos corresponden a las ventas, gasto en publicidad y PIB (producto interno bruto) dr una empresa I desde 1981 hasta 1999, la frecuencia es trimestral. Los datos fueron extraidos del libro "Forecasting: Principles and Practice" de Rob J Hyndman y George Athanasopoulos.  
+
+```{r}
+tute1 <- read.csv("tute1.csv", header = TRUE)
+
+tute1 <- tute1 %>%
+  rename("Ventas" = "Sales", "Publicidad" = "AdBudget", "PIB" = "GDP")
+
+# tute1 como ts considerando una frecuencia trimestral
+
+tute1_ts <- ts(tute1[-1], start = 1981, frequency = 4)
+
+
+autoplot(tute1_ts, facets = TRUE) +
+  ggtitle("Ventas de la empresa I") +
+  ylab("Ventas (miles de unidades)") + xlab("Año") +
+  theme(plot.title = element_text(size = 9))
+```
+
+### Ventas Minoristas por Estados en AUS  
+
+Los siguientes datos representan las ventas minoristas en varias categorías para diferentes estados australianos. De estas se selecciona una para evaluar tendencia, estacionalidad y ciclos.
+```{r retail}
+
+retaildata <- readxl::read_excel("retail.xlsx", skip = 1)
+
+myts <- ts(retaildata[, "A3349507A"], frequency = 12, start = c(1982, 4))
+
+rm(retaildata)
+```
+
+El gráfico de la serie tempora muestra una clara tendencia creciente, estacionalidad anual y ciclos. La serie tiene una frecuencia de 12 (mensual).  
+```{r retail_plot, fig.height=3}
+autoplot(myts)
+```  
+
+
+#### Estacionalidad
+
+Se puede observar la estacionalidad de la serie temporal mediante un gráfico de `seasonplot` y un gráfico de `ACF` (autocorrelación). Estos gráficos permiten identificar patrones estacionales y la relación entre los valores de la serie en diferentes rezagos. Así, se puede ver que la serie tiene un patrón estacional anual, con picos en ciertos meses y una autocorrelación significativa en los rezagos correspondientes a la estacionalidad. La estacionalidad es anual (rezagos en múltiplos de 12 meses), los picos en la autocorrelación se corresponden con los meses de mayor actividad comercial, principalmente diciembre y algo a mitad de año.  
+```{r retail_estacionalidad, fig.height=3, fig.align="center"}
+ggseasonplot(myts, year.labels = TRUE, year.labels.left = TRUE) +
+  ggtitle("Seasonal plot of retail sales: Australia") +
+  ylab("Retail sales (millions)") + xlab("Month")
+
+ggAcf(myts) +
+  ggtitle("ACF of retail sales: Australia") +
+  ylab("Autocorrelation") + xlab("Lag (months)")
+```
+  
+```{r}
+ggsubseriesplot(myts) +
+  ggtitle("Subseries plot of retail sales: Australia") +
+  ylab("Retail sales (millions)") + xlab("Month")
+```  
+
+```{r retail_lag}
+gglagplot(myts, lags = 9) +
+  xlab("Lags ")
 ```
 
 
+### Times series: bicoal, chicken, dole, usdeaths, lynx, goog, writing, fancy, a10, h02.
 
+#### BICOAL 
+Annual bituminous coal production in the USA: 1920–1968.
+
+```{r bicoal, fig.height=3, fig.align="center"}
+autoplot(bicoal) +
+  geom_point() +
+  xlab("Años") + ylab("Carbón Bituminoso (kT)")
+```  
+
+
+#### LYNX 
+Annual numbers of lynx trappings for 1821–1934 in Canada. Taken from Brockwell & Davis (1991), this appears to be the series considered by Campbell & Walker (1977).
+```{r lynx, fig.align="center"}
+p1 <- autoplot(lynx) +
+  xlab("Años") + ylab("Número de linces capturados") +
+  geom_point()
+
+p2 <-  ggAcf(lynx)
+
+# p3 <-  gglagplot(lynx) + theme(legend.position = "none")
+
+ggarrange(p1, p2, ncol = 1)
+```
+
+### Exploracion de patrones estaciones en `writing, fancy, a10, h02`.
+
+#### TS `writing`
+Industry sales for printing and writing paper (in thousands of French francs): Jan 1963 – Dec 1972.
+```{r writing, fig.height=3, fig.align="center"}
+autoplot(writing) +
+  ggtitle("Ventas de papel para impresión y escritura: Fancia") +
+  ylab("Ventas (miles de francos franceses)") + xlab("Año") +
+  geom_point()
+
+ggseasonplot(writing)
+
+ggAcf(writing)
+```
+
+La frecuencia de la serie es `r frequency(writing)` (12 indica mensual). Se observa una tendencia creciente y estacionalidad anual. La serie muestra disminuciones en las ventas en el mes de agosto, lo que se puede relacionar con las vacaciones de verano en francia.
+
+#### TS `fancy`
+
+Ventas mensuales de souvenires en una tienda de regalos en Australia
+```{r fancy, fig.height=3, fig.align="center"}
+autoplot(fancy) +
+  ggtitle("Ventas de souvenires: Australia") +
+  ylab("Ventas (miles de dolares)") + xlab("Año")
+
+ggseasonplot(fancy) +
+  ggtitle("Grafico de estacionalidad") +
+  ylab("Ventas (miles de dolares)") + xlab("Mes")
+
+ggAcf(fancy)
+```
+
+La serie `fancy` muestra una marcada tendencia creciente y estacionalidad anual. Se observa un incremento en las ventas desde octubre hasta diciembre (fiestas??).
+
+#### TS `a10`
+Monthly sales of women’s clothing in Australia: Jan 1982 – Dec 1989.
+
+```{r a10, fig.height=3, fig.align="center"}
+autoplot(a10)
+
+ggseasonplot(a10)
+
+ggAcf(a10)
+```
