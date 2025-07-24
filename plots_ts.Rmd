@@ -293,12 +293,126 @@ ggAcf(fancy)
 La serie `fancy` muestra una marcada tendencia creciente y estacionalidad anual. Se observa un incremento en las ventas desde octubre hasta diciembre (fiestas??).
 
 #### TS `a10`
-Monthly sales of women’s clothing in Australia: Jan 1982 – Dec 1989.
+Gasto público mensual (en millones de dólares) en el marco del Plan de Prestaciones Farmacéuticas para productos con el código ATC A10, según los registros de la Comisión Australiana de Seguros de Salud. Julio de 1991 - junio de 2008.
 
 ```{r a10, fig.height=3, fig.align="center"}
-autoplot(a10)
+autoplot(a10) +
+  ggtitle("Gasto público 'mensual' en productos farmacéuticos (ATC A10): Australia") + #nolint
+  ylab("Gasto (millones de dolares)") + xlab("Año")
 
-ggseasonplot(a10)
+ggseasonplot(a10) +
+  ggtitle("Gráfico de estacionalidad (ATC A10)") +
+  ylab("Gasto (millones de dolares)") + xlab("Mes")
 
-ggAcf(a10)
+ggAcf(a10) +
+  ggtitle("ACF del gasto público (ATC A10): Australia") +
+  ylab("Autocorrelación") + xlab("Rezago (meses)")
+```
+
+La serie `a10` muestra una tendencia creciente y estacionalidad anual. El gasto se incrementa en enero y la correlación es positiva en los rezagos de 12 meses, lo que indica que el gasto del mismo mes en años consecutivos está correlacionado.
+
+#### TS `h02` 
+
+Gasto público mensual (millones de dolares) en el marco del Plan de Prestaciones Farmacéuticas para productos con el código ATC H02 conforme a los registros de la Comisión Australiana de Seguros de Salud. Julio de 1991 - junio de 2008.
+```{r h02, fig.height=3, fig.align="center"}
+autoplot(h02) +
+  ggtitle("Gasto público mensual en ATC H02: Australia") +
+  ylab("Millones de dolares") + xlab("Año")
+
+ggseasonplot(h02) +
+  ggtitle("Grafico de estacionalidad (TS H02)") +
+  ylab("Millones de dolares") + xlab("mes")
+
+ggAcf(h02) +
+  ggtitle("ACF del gasto público en H02") +
+  ylab("Autocorrelación") + xlab("Rezago (mes)")
+```
+
+Este caso es equivalente a `TS A10`, el gráfico de estacionalidad muestra que el pico ocurre en diciembre y enero.
+
+### Estacionalidad, ciclos y tendencia en `hsales, usdeaths, bricksq, sunspotarea, gasoline.`
+
+#### TS `hsales`
+
+Ventas mensuales de casas unifamiliares en USA desde 1973.
+```{r hsales, fig.height=3, fig.align="center"}
+autoplot(hsales)
+ggseasonplot(hsales)
+ggsubseriesplot(hsales)
+gglagplot(hsales)
+ggAcf(hsales)
+```
+
+- Tendencia: no observable  
+- Estacionalidad:  
+Anual marcada y distintiva, caracterizada por un patrón claro de ventas más bajas al inicio y al final del año, alcanzando su punto máximo en los meses de primavera (marzo - abril). Este patrón anual se observa consistentemente a lo largo de los múltiples años de datos. La clara estacionalidad anual significa que los modelos de pronóstico simples serían muy imprecisos. Se requieren modelos avanzados de series temporales (como ARIMA con componentes estacionales o Prophet) para capturar este patrón.  
+
+- Ciclos:  
+La serie exhibe períodos de varios años de crecimiento seguidos de períodos de declive. Estos ciclos parecen tener una duración aproximada de 3 a 5 años entre picos o valles.  
+
+#### TS `gasoline`  
+
+Datos semanales desde el 2 de febrero de 1991 hasta 20 enero de 2017
+
+```{r gaso, fig.align="center", fig.height=3}
+autoplot(gasoline)
+ggseasonplot(gasoline)
+ggAcf(gasoline, lag = 52)
+ggPacf(gasoline)
+gglagplot(gasoline)
+```
+
+- Tendencia: creciente 
+
+- Estacionalidad: no se observa
+
+- Ciclos:  
+Se observan ciclos multianuales con duración de entre 10 a 15 años, de 1991 a 2005 se aprecia una clara tendencia creciente, de 2005 a +/-2013 cambia a decreciente para volver a crecer hasta el final de la serie.  
+La serie `gasoline` presenta una pronunciada oscilación intranual sin un patrón claro que determine una significativa estacionalidad, la tendencia a largo plazo es creciente con ciclos distinguibles de duración variable, de 5 a 15 años.
+
+### Data Set `arrivals`
+
+Incluye datos trimestrales de llegadas internaciones (en miles) a Australia desde Japon, NZ, UK y US desd 1981Q1 - 2012Q3
+
+    Use autoplot(), ggseasonplot() and ggsubseriesplot() to compare the differences between the arrivals from these four countries.
+    Can you identify any unusual observations?
+
+```{r arrivals}
+arrivals %>% glimpse
+autoplot(arrivals[, ], facet = TRUE) +
+  geom_smooth()
+ggseasonplot(arrivals[, 1])
+ggseasonplot(arrivals[, 2])
+ggseasonplot(arrivals[, 3])
+ggseasonplot(arrivals[, 4])
+ggsubseriesplot(arrivals[, 2])
+```
+
+1.  Japan Origin:  
+La serie es cíclica con una tendencia creciene hasta aproximadamente 1998, año a partir del cual comienza una clara tendencia decreciente. En tanto, es posible apreciar una estacionalidad suave dada una disminución de los arribos en el segundo trimestre.
+
+2. Nueva Zelanda:  
+En este caso la tendencia es creciente a lo largo de toda la serie y la estacionalidad se caracteriza por incrementos en los arribos en el segundo y tercer trimestre con mínimos en el primer trimestre.  
+
+3. Reino Unido (UK)  
+La serie de arribos desde UK presenta una clara tendencia creciente. Dado que apartir desde 2010 la serie parece oscilar alrededor de una media general, se puede postular que esta serie es ciclica con ciclos de aproximadamente 10 años. En cuanto a la estacionalidad la misma es màs pronunciada que en las anteriores con màximos en Q1 y Q4.
+
+4. US
+Equivalente a UK, tendencia creciente con ciclos de 10 años (el último ciclo la serie deja de mostrar una tendencia clara oscilando alrededor de una media general). La estacionalidad es más suave pero con el mismo patrón que en UK.
+
+### Plot TS vs ACF
+
+
+```{r ts_acf, fig.height=3, fig.align="center"}
+# Para cow temp considero que es la B
+ggarrange(autoplot(cowtemp), ggAcf(cowtemp), ncol = 1)
+
+## corresponde el grafico C
+ggarrange(mink %>% autoplot(), mink %>% ggAcf(), ncol = 1)
+
+## corresponde la A
+ggarrange(USAccDeaths %>% autoplot(), USAccDeaths %>% ggAcf(), ncol = 1)
+
+## corresponde la D
+ggarrange(AirPassengers %>% autoplot, AirPassengers %>% ggAcf(), ncol = 1)
 ```
