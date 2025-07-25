@@ -103,3 +103,29 @@ autoplot(goog200) +
   autolayer(forecast_drift, series = "Drift", PI = TRUE)
 ```
 
+
+# Transformaciones y ajustes:
+
+Las transformaciones y/o ajustes se realizan con la finalidad de simplificar la tarea de previsión. El proposito es simplificar patrones en los datos históricos eliminando fuentes conocidas de variación o haciendo el patron más consistente. A continuación se presentan: ajustes por calendario, poblacionales, de inflación y transformaciones matemáticas.  
+
+## Ajuste por calendario
+Si parte de la variación observada puede deberse a efectos de calendario, en tal caso es conveniente eliminar dicho efecto antes de generar un modelo de previsión.
+
+Por ejemplo, en el data set de producción mensual de leche se observa una variación dada la cantidad de días de cada mes, en consecuencia un camino es tomar el promedio mensual para licuar dicha variación que no es de interes.
+
+```{r milk}
+milk_df <- cbind(
+  mensual = milk,
+  promedio_diario = milk / monthdays(milk)
+)
+
+milk_df %>% autoplot(facet = TRUE)
+```
+
+Un ajuste similar se puede hacer para los datos de ventas cuando el número de días de negociación en cada mes varía. En este caso, las ventas por día de negociación se pueden modelar en lugar de las ventas totales para cada mes.
+
+## Ajuste poblacionales  
+
+Cualquier dato que se vea afectado por los cambios poblacionales puede ajustarse para dar datos per cápita. Es decir, considere los datos por persona (o por cada mil personas, o por millón de personas) en lugar del total. Por ejemplo, si estás estudiando el número de camas de hospital en una región en particular con el tiempo, los resultados son mucho más fáciles de interpretar si eliminas los efectos de los cambios demográficos al considerar el número de camas por cada mil personas. Entonces se puede ver si ha habido aumentos reales en el número de camas, o si los aumentos se deben enteramente a aumentos de la población. Es posible que el número total de camas aumente, pero el número de camas por cada mil personas disminuirá. Esto ocurre cuando la población está aumentando más rápido que el número de camas de hospital. Para la mayoría de los datos que se ven afectados por los cambios demográficos, lo mejor es utilizar los datos per cápita en lugar de los totales.
+
+## Ajuste por inflación  
