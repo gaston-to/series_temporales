@@ -1,0 +1,105 @@
+---
+title: "Herramientas de prediccción de series temporales"
+subtitle: "Extracto de Forecasting: Principles and Practice"
+author: "Rob J Hyndman, George Ath"
+
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, warning = FALSE, message = FALSE,
+  fig.height = 3, fig.align = "center"
+)
+
+library(kableExtra)
+library(tidyverse)
+library(fpp2)
+library(GGally)
+```
+
+# Métodos simples
+
+## Método de la media
+
+Aquí, las previsiones de todos los valores futuros son iguales al promedio de los datos históricos. 
+```{r mean_method}
+beer2 <- window(ausbeer, start = 1992, end = c(2007, 4))
+
+# con meanf se realizan las predicciones por este método
+# el argumento 'h' corresponde al horizonte de tiempo al que se predice
+forecast_mean <- meanf(beer2, h = 11)
+```
+
+- Gráfico de la predicción
+```{r mean_plot, fig.height=3}
+autoplot(beer2) +
+  autolayer(forecast_mean, series = "Mean", PI = TRUE)
+```
+
+## Método ingenuo
+
+Para las previsiones ingenuas, simplemente fijamos todas las previsiones para ser el valor de la última observación.  
+Es decir, $$Y_{T-h|T} = YT$$. Este método funciona notablemente bien para muchas series temporales económicas y financieras.
+
+```{r naive_metod}
+forecast_naive <- naive(beer2, h = 11)
+```
+
+- Gráfico de la predicción
+```{r plt_naive}
+autoplot(beer2) +
+  autolayer(forecast_naive, series = "Naive", PI = TRUE)
+```
+
+## Ingenuo Estacional
+
+Un método similar es útil para datos altamente estacionales. En este caso, establecemos que cada previsión es igual al último valor observado de la misma temporada (por ejemplo, el mismo mes del año anterior).  
+$$\hat{y}_{T+h|T} = y_{T+h-m(k+1)}$$
+
+Donde *m* es el período estacional y *k* es la parte entera de (h-1)/m (es decir, el número de años completos del período de pronóstico antes del tiempo T+h). Esto parece más complejo de lo que realmente es. Por ejemplo, con datos mensuales, el pronóstico para todos los valores futuros de febrero es igual al último valor observado de febrero. Con datos trimestrales, el pronóstico para todos los valores futuros del segundo trimestre es igual al último valor observado del segundo trimestre
+
+```{r snaive_metod}
+forecast_snaive <- snaive(beer2, h = 11)
+```
+
+- Gráfico de la predicción
+```{r fig.align="center"}
+autoplot(beer2) +
+  autolayer(forecast_snaive, series = "Naive Stationari", PI = TRUE)
+```
+
+## Mètodo de deriva (Drift)
+
+Este método es una variación del `naive` permitiendo que las predicciones aumenten o disminuyan en el tiempo conforme a la tendencia de la serie. Así la previsión se da por:   
+$$\hat{y}_{T+h|T} = y_{T} + h \left( \frac{y_{T} -y_{1}}{T-1}\right).$$
+
+### Ejemplo para `beer2`  
+
+En este caso es equivalente al metodo naive dado que la serie no muestra tendencia
+
+```{r drift_method}
+forecast_drift <- rwf(beer2, h = 11, drift = TRUE)
+```
+
+- Gráfico de predicción
+
+```{r}
+autoplot(beer2) +
+  autolayer(forecast_drift, series = "Drift", PI = TRUE)
+```
+
+### Ejemplo para `goog`
+
+
+```{r drift_method_goog}
+forecast_drift <- rwf(goog200, h = 40, drift = TRUE)
+```
+
+- Gráfico de predicción
+
+```{r}
+autoplot(goog200) +
+  autolayer(forecast_drift, series = "Drift", PI = TRUE)
+```
+
